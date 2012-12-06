@@ -9,7 +9,8 @@ let limit = ref 1000
 let rec iter n e = (* Å“K‰»ˆ—‚ğ‚­‚è‚©‚¦‚· (caml2html: main_iter) *)
   Printf.eprintf "iteration %d\n" n;
   if n = 0 then e else
-  let e' = Elim.f (ConstFold.f (Inline.f (Assoc.f (Beta.f (Cselim.f e))))) in
+//  let e' = Elim.f (ConstFold.f (Inline.f (Assoc.f (Beta.f (Cselim.f e))))) in
+  let e' = Elim.f (ConstFold.f (Inline.f (Assoc.f (Beta.f (e))))) in
   if e = e' then e else
   iter (n - 1) e'
 

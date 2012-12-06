@@ -27,6 +27,11 @@ let rec deref_term = function
   | Not(e) -> Not(deref_term e)
   | Neg(e) -> Neg(deref_term e)
   | Add(e1, e2) -> Add(deref_term e1, deref_term e2)
+(*			let d1 = deref_term e1 in 
+			(match d1 with 
+			| Int _ -> Add(d1, deref_term e2)
+			| Float _ -> FAdd(d1, deref_term e2)
+			| e -> e)*)
   | Sub(e1, e2) -> Sub(deref_term e1, deref_term e2)
   | Eq(e1, e2) -> Eq(deref_term e1, deref_term e2)
   | LE(e1, e2) -> LE(deref_term e1, deref_term e2)
@@ -99,9 +104,11 @@ let rec g env e = (* Œ^„˜_ƒ‹[ƒ`ƒ“ (caml2html: typing_g) *)
 				unify Type.Int (g env e);
 				Type.Int
     | Add(e1, e2) | Sub(e1, e2) | Mul(e1,e2) | Div(e1,e2)-> (* ‘«‚µŽZi‚Æˆø‚«ŽZj‚ÌŒ^„˜_ (caml2html: typing_add) *)
-	unify Type.Int (g env e1);
-	unify Type.Int (g env e2);
-	Type.Int
+			let t1 = g env e1 in
+			unify t1 (g env e2);
+			t1
+//	unify Type.Int (g env e2);
+//	Type.Int
     | FNeg(e) ->
 	unify Type.Float (g env e);
 	Type.Float

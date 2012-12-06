@@ -88,12 +88,12 @@ and g' oc = function (* 各命令のアセンブリ生成 *)
   | (NonTail(_), Nop) -> ()
   (*即値代入*)
   | (NonTail(x), Li(i)) when i >= -32768 && i < 32768 -> 
-      Printf.fprintf oc "\tmvli\t%s, %d\n" (reg x) i
+      Printf.fprintf oc "\taddi\t%s, r0, %d\n" (reg x) i
   | (NonTail(x), Li(i)) ->(*大きすぎる即値*)
       let n = i >>> 16 in
       let m = i ^^^ (n <<< 16) in
-				Printf.fprintf oc "\tmvhi\t%s, %d\n" (reg x) n;
-				Printf.fprintf oc "\tmvli\t%s, %d\n" (reg x) m
+				Printf.fprintf oc "\tmvhi\t%s, r0, %d\n" (reg x) n;
+				Printf.fprintf oc "\tmvli\t%s, %s, %d\n" (reg x) (reg x) m
 (*      let r = reg x in
 				Printf.fprintf oc "\taddi\t%s, r0, %d\t#%s = %d\n" r n r i;
 				Printf.fprintf oc "\tslli\t%s, %s, 16\n" r r;
@@ -107,8 +107,8 @@ and g' oc = function (* 各命令のアセンブリ生成 *)
   | (NonTail(x), FLi(i)) ->
       let n = i >>> 16 in
       let m = i ^^^ (n <<< 16) in
-				Printf.fprintf oc "\tfmvhi\t%s, %d\n" (reg x) n;
-				Printf.fprintf oc "\tfmvli\t%s, %d\n" (reg x) m
+				Printf.fprintf oc "\tfmvhi\t%s, r0, %d\n" (reg x) n;
+				Printf.fprintf oc "\tfmvli\t%s, %s, %d\n" (reg x) (reg x) m
 (*      let r = reg x in
 				Printf.fprintf oc "\taddi\t%s, r0, %d\t#%s = %08x\n" reg_tmp n reg_tmp i;
 				Printf.fprintf oc "\tslli\t%s, %s, 16\n" reg_tmp reg_tmp;
@@ -262,53 +262,53 @@ and g' oc = function (* 各命令のアセンブリ生成 *)
       Printf.fprintf oc "\thlt\n";
 		(*レジスタ比較*)
   | (Tail, IfEq(x, V(y), e1, e2)) ->
-      Printf.fprintf oc "\tsubs\tr0, %s, %s\n" (reg x) (reg y);
+      Printf.fprintf oc "\tsubs[IfEq]\tr0, %s, %s\n" (reg x) (reg y);
       g'_tail_if oc e1 e2 "jmpeq" "jmpine"
 		(*即値比較*)
   | (Tail, IfEq(x, C(y), e1, e2)) ->
-      Printf.fprintf oc "\tsubis\tr0, %s, %d\n" (reg x) y;
-      g'_tail_if oc e1 e2 "jmpeq" "jmpine"
+			Printf.fprintf oc "\tsubis[IfEqi]\tr0, %s, %d\n" (reg x) y;
+	      g'_tail_if oc e1 e2 "jmpieq" "jmpine"
   | (Tail, IfLE(x, V(y), e1, e2)) ->
-      Printf.fprintf oc "\tsubs\tr0, %s, %s\n" (reg x) (reg y);
+      Printf.fprintf oc "\tsubs[IfLE]\tr0, %s, %s\n" (reg x) (reg y);
       g'_tail_if oc e1 e2 "jmple" "jmpigt"
   | (Tail, IfLE(x, C(y), e1, e2)) ->
-      Printf.fprintf oc "\tsubis\tr0, %s, %d\n" (reg x) y;
-      g'_tail_if oc e1 e2 "jmple" "jmpigt"
+			 Printf.fprintf oc "\tsubis[IfLEi]\tr0, %s, %d\n" (reg x) y;
+	      g'_tail_if oc e1 e2 "jmpile" "jmpigt"
   | (Tail, IfGE(x, V(y), e1, e2)) ->
-      Printf.fprintf oc "\tsubs\tr0, %s, %s\n" (reg x) (reg y);
+      Printf.fprintf oc "\tsubs[IfGE]\tr0, %s, %s\n" (reg x) (reg y);
       g'_tail_if oc e1 e2 "jmpge" "jmpilt"
   | (Tail, IfGE(x, C(y), e1, e2)) ->
-      Printf.fprintf oc "\tsubis\tr0, %s, %d\n" (reg x) y;
-      g'_tail_if oc e1 e2 "jmpge" "jmpilt"
+			Printf.fprintf oc "\tsubis[IfGEi]\tr0, %s, %d\n" (reg x) y;
+	      g'_tail_if oc e1 e2 "jmpige" "jmpilt"
   | (Tail, IfFEq(x, y, e1, e2)) ->
-      Printf.fprintf oc "\tfsubs\tf0, %s, %s\n" (reg x) (reg y);
+      Printf.fprintf oc "\tfsubs[IfFEq]\tf0, %s, %s\n" (reg x) (reg y);
       g'_tail_if oc e1 e2 "jmpeq" "jmpine"
   | (Tail, IfFLE(x, y, e1, e2)) ->
-      Printf.fprintf oc "\tfsubs\tf0, %s, %s\n" (reg x) (reg y);
+      Printf.fprintf oc "\tfsubs[IfFLE]\tf0, %s, %s\n" (reg x) (reg y);
       g'_tail_if oc e1 e2 "jmple" "jmpigt"
   | (NonTail(z), IfEq(x, V(y), e1, e2)) ->
-      Printf.fprintf oc "\tsubs\tr0, %s, %s\n" (reg x) (reg y);
+      Printf.fprintf oc "\tsubs[IfEq]\tr0, %s, %s\n" (reg x) (reg y);
       g'_non_tail_if oc (NonTail(z)) e1 e2 "jmpeq" "jmpine"
   | (NonTail(z), IfEq(x, C(y), e1, e2)) ->
-      Printf.fprintf oc "\tsubis\tr0, %s, %d\n" (reg x) y;
-      g'_non_tail_if oc (NonTail(z)) e1 e2 "jmpeq" "jmpine"
+			Printf.fprintf oc "\tsubis[IfEqi]\tr0, %s, %d\n" (reg x) y;
+	      g'_non_tail_if oc (NonTail(z)) e1 e2 "jmpieq" "jmpine"
   | (NonTail(z), IfLE(x, V(y), e1, e2)) ->
-      Printf.fprintf oc "\tsubs\tr0, %s, %s\n" (reg x) (reg y);
+      Printf.fprintf oc "\tsubs[IfLE]\tr0, %s, %s\n" (reg x) (reg y);
       g'_non_tail_if oc (NonTail(z)) e1 e2 "jmple" "jmpigt"
   | (NonTail(z), IfLE(x, C(y), e1, e2)) ->
-      Printf.fprintf oc "\tsubis\tr0, %s, %d\n" (reg x) y;
-      g'_non_tail_if oc (NonTail(z)) e1 e2 "jmple" "jmpigt"
+			Printf.fprintf oc "\tsubis[IfLEi]\tr0, %s, %d\n" (reg x) y;
+	      g'_non_tail_if oc (NonTail(z)) e1 e2 "jmpile" "jmpigt"
   | (NonTail(z), IfGE(x, V(y), e1, e2)) ->
-      Printf.fprintf oc "\tsubs\tr0, %s, %s\n" (reg x) (reg y);
+      Printf.fprintf oc "\tsubs[IfGE]\tr0, %s, %s\n" (reg x) (reg y);
       g'_non_tail_if oc (NonTail(z)) e1 e2 "jmpge" "jmpilt"
   | (NonTail(z), IfGE(x, C(y), e1, e2)) ->
-      Printf.fprintf oc "\tsubis\tr0, %s, %d\n" (reg x) y;
-      g'_non_tail_if oc (NonTail(z)) e1 e2 "jmpge" "jmpilt"
+			Printf.fprintf oc "\tsubis[IfGEi]\tr0, %s, %d\n" (reg x) y;
+	      g'_non_tail_if oc (NonTail(z)) e1 e2 "jmpige" "jmpilt"
   | (NonTail(z), IfFEq(x, y, e1, e2)) ->
-      Printf.fprintf oc "\tfsubs\tf0, %s, %s\n" (reg x) (reg y);
+      Printf.fprintf oc "\tfsubs[IfFEq]\tf0, %s, %s\n" (reg x) (reg y);
       g'_non_tail_if oc (NonTail(z)) e1 e2 "jmpeq" "jmpine"
   | (NonTail(z), IfFLE(x, y, e1, e2)) ->
-      Printf.fprintf oc "\tfsubs\tf0, %s, %s\n" (reg x) (reg y);
+      Printf.fprintf oc "\tfsubs[IfFLE]\tf0, %s, %s\n" (reg x) (reg y);
       g'_non_tail_if oc (NonTail(z)) e1 e2 "jmple" "jmpigt"
   (* 関数呼び出しの仮想命令の実装 *)
   | (Tail, CallCls(x, ys, zs)) -> (* 末尾呼び出し *)
@@ -364,6 +364,15 @@ and g'_tail_if oc e1 e2 b bn =
       Printf.fprintf oc "%s:\n" b_else;
       stackset := stackset_back;
       g oc (Tail, e2)
+and g'_tail_if_i oc e1 e2 b bn r im = 
+  let b_else = Id.genid (b ^ "_else") in
+    Printf.fprintf oc "\t%s\t%s, %d, %s\n" bn r im b_else;
+    let stackset_back = !stackset in
+      g oc (Tail, e1);
+      Printf.fprintf oc "%s:\n" b_else;
+      stackset := stackset_back;
+      g oc (Tail, e2)
+
 and g'_non_tail_if oc dest e1 e2 b bn = 
   let b_else = Id.genid (b ^ "_else") in
   let b_cont = Id.genid (b ^ "_cont") in
@@ -378,6 +387,22 @@ and g'_non_tail_if oc dest e1 e2 b bn =
 	Printf.fprintf oc "%s:\n" b_cont;
 	let stackset2 = !stackset in
 	  stackset := Set.intersect stackset1 stackset2
+
+and g'_non_tail_if_i oc dest e1 e2 b bn r im = 
+  let b_else = Id.genid (b ^ "_else") in
+  let b_cont = Id.genid (b ^ "_cont") in
+    Printf.fprintf oc "\t%s\t%s, %d, %s\n" bn r im b_else;
+    let stackset_back = !stackset in
+      g oc (dest, e1);
+      let stackset1 = !stackset in
+	Printf.fprintf oc "\tjmpi\t%s\n" b_cont;
+	Printf.fprintf oc "%s:\n" b_else;
+	stackset := stackset_back;
+	g oc (dest, e2);
+	Printf.fprintf oc "%s:\n" b_cont;
+	let stackset2 = !stackset in
+	  stackset := Set.intersect stackset1 stackset2
+
 and g'_args oc x_reg_cl ys zs = 
 (*引数を格納するためのスワップ*)
   let (i, yrs) = 
@@ -465,8 +490,8 @@ let f oc (Prog(data, fundefs, e)) =
 		Printf.fprintf oc "external_float_of_int:\n";
 		Printf.fprintf oc "\tsubis\tr0, r2, 0\n";
 		Printf.fprintf oc "\tjmpilt\tfloat_of_int.1\t\t#minus\n";
-		Printf.fprintf oc "\tmvhi\tr32, 128\t# r32 = 8388608\n";
-		Printf.fprintf oc "\tmvhi\tr33, 19200\t# r33 = 0x4B000000\n";
+		Printf.fprintf oc "\tmvhi\tr32, r0, 128\t# r32 = 8388608\n";
+		Printf.fprintf oc "\tmvhi\tr33, r0, 19200\t# r33 = 0x4B000000\n";
 		Printf.fprintf oc "\tsubs\tr0, r2, r32\n";
 		Printf.fprintf oc "\tjmpige\tfloat_of_int.2\t\t#large\n";
 		Printf.fprintf oc "\tadd\tr34, r2, r33\n";
@@ -485,8 +510,8 @@ let f oc (Prog(data, fundefs, e)) =
 		Printf.fprintf oc "\tjmp\tr31\n";
 		Printf.fprintf oc "float_of_int.1:\n";
 		Printf.fprintf oc "\tsubs\tr2, r0, r2\n";
-		Printf.fprintf oc "\tmvhi\tr32, 128\t# r32 = 8388608\n";
-		Printf.fprintf oc "\tmvhi\tr33, 19200\t# r33 = 0x4B000000\n";
+		Printf.fprintf oc "\tmvhi\tr32, r0, 128\t# r32 = 8388608\n";
+		Printf.fprintf oc "\tmvhi\tr33, r0, 19200\t# r33 = 0x4B000000\n";
 		Printf.fprintf oc "\tsubs\tr0, r2, r32\n";
 		Printf.fprintf oc "\tjmpige\tfloat_of_int.3\t\t#large\n";
 		Printf.fprintf oc "\tadd\tr34, r2, r33\n";
@@ -509,7 +534,7 @@ let f oc (Prog(data, fundefs, e)) =
 		Printf.fprintf oc "external_int_of_float:\n";
 		Printf.fprintf oc "\tfsubs\tf0, f1, f0\n";
 		Printf.fprintf oc "\tjmpilt\tint_of_float.1 	#minus\n";
-		Printf.fprintf oc "\tmvhi\tr33, 19200\t# r33 = 0x4B000000\n";
+		Printf.fprintf oc "\tmvhi\tr33, r0, 19200\t# r33 = 0x4B000000\n";
 		Printf.fprintf oc "\tfsubs\tf0, f1, f33\n";
 		Printf.fprintf oc "\tjmpige\tint_of_float.2	#large\n";
 		Printf.fprintf oc "\tfadd\tf34, f1, f33\n";
@@ -517,7 +542,7 @@ let f oc (Prog(data, fundefs, e)) =
 		Printf.fprintf oc "\tjmp\tr31\n";
 		Printf.fprintf oc "int_of_float.2:\n";
 		Printf.fprintf oc "\taddi\tr6, r0, 0\n";
-		Printf.fprintf oc "\tmvhi\tr32, 128\t# r32 = 8388608\n";
+		Printf.fprintf oc "\tmvhi\tr32, r0, 128\t# r32 = 8388608\n";
 		Printf.fprintf oc "int_of_float.21:\n";
 		Printf.fprintf oc "\tadd\tr6, r6, r32\n";
 		Printf.fprintf oc "\tfsub\tf1, f1, f33\n";
@@ -529,7 +554,7 @@ let f oc (Prog(data, fundefs, e)) =
 		Printf.fprintf oc "\tjmp\tr31\n";
 		Printf.fprintf oc "int_of_float.1:\n";
 		Printf.fprintf oc "\tfneg\tf1, f1\n";
-		Printf.fprintf oc "\tmvhi\tr33, 19200\t# r33 = 0x4B000000\n";
+		Printf.fprintf oc "\tmvhi\tr33, r0, 19200\t# r33 = 0x4B000000\n";
 		Printf.fprintf oc "\tfsubs\tf0, f1, f33\n";
 		Printf.fprintf oc "\tjmpige\tint_of_float.3	#large\n";
 		Printf.fprintf oc "\tfadd\tf34, f1, f33\n";
@@ -538,7 +563,7 @@ let f oc (Prog(data, fundefs, e)) =
 		Printf.fprintf oc "\tjmp\tr31\n";
 		Printf.fprintf oc "int_of_float.3:\n";
 		Printf.fprintf oc "\taddi\tr6, r0, 0\n";
-		Printf.fprintf oc "\tmvhi\tr32, 128\t# r32 = 8388608\n";
+		Printf.fprintf oc "\tmvhi\tr32, r0, 128\t# r32 = 8388608\n";
 		Printf.fprintf oc "int_of_float.31:\n";
 		Printf.fprintf oc "\tadd\tr6, r6, r32\n";
 		Printf.fprintf oc "\tfsub\tf1, f1, f33\n";
@@ -552,7 +577,7 @@ let f oc (Prog(data, fundefs, e)) =
 	(if !floorflag=1 then(
 		Printf.fprintf oc "external_floor:\n";
 		Printf.fprintf oc "\tfsubs\tf0, f1, f0\n";
-		Printf.fprintf oc "\tmvhi\tr33, 19200\t# r33 = 0x4B000000\n";
+		Printf.fprintf oc "\tmvhi\tr33, r0, 19200\t# r33 = 0x4B000000\n";
 		Printf.fprintf oc "\tjmpilt\tfloor.1 \t#minus\n";
 		Printf.fprintf oc "\tfsubs\tf0, f33, f1\n";
 		Printf.fprintf oc "\tjmplt\tr31	\t# large->return\n";
@@ -563,7 +588,7 @@ let f oc (Prog(data, fundefs, e)) =
 		Printf.fprintf oc "\tjmpilt\tfloor.2\n";
 		Printf.fprintf oc "\tjmp\tr31\n";
 		Printf.fprintf oc "floor.2:\n";
-		Printf.fprintf oc "\tmvhi\tr34, 16256\t# r34 = 0x3F800000 = 1.0\n";
+		Printf.fprintf oc "\tmvhi\tr34, r0, 16256\t# r34 = 0x3F800000 = 1.0\n";
 		Printf.fprintf oc "\tfsub\tf1, f1, f34\n";
 		Printf.fprintf oc "\tjmp\tr31\n";
 		Printf.fprintf oc "floor.1:\n";
@@ -580,7 +605,7 @@ let f oc (Prog(data, fundefs, e)) =
 		Printf.fprintf oc "\tjmpilt\tfloor.3\n";
 		Printf.fprintf oc "\tjmp\tr31\n";
 		Printf.fprintf oc "floor.3:\n";
-		Printf.fprintf oc "\tmvhi\tr34, 16256\t# r34 = 0x3F800000 = 1.0\n";
+		Printf.fprintf oc "\tmvhi\tr34, r0, 16256\t# r34 = 0x3F800000 = 1.0\n";
 		Printf.fprintf oc "\tfsub\tf1, f1, f34\n";
 		Printf.fprintf oc "\tjmp\tr31\n")else ())
 (*  Printf.fprintf oc "\tmr\tr3, %s\n" regs.[0]; *)
